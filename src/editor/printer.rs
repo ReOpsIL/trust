@@ -1,6 +1,6 @@
 use std::io::{self, Write};
-use console::Key;
 use crossterm::{
+    event::KeyCode,
     terminal::{self, Clear, ClearType},
     cursor::{self, SetCursorStyle},
     style::{self, Stylize},
@@ -8,7 +8,7 @@ use crossterm::{
 };
 
 pub struct Printer {
-    last_key: Key,
+    last_key: KeyCode,
     viewport_start: usize,  // First line to display
     viewport_height: usize, // Number of lines to display
 }
@@ -19,7 +19,7 @@ impl Printer {
         let (_, height) = terminal::size().unwrap_or((80, 24));
 
         Self {
-            last_key: Key::Unknown,
+            last_key: KeyCode::Null,
             viewport_start: 0,
             viewport_height: height as usize - 2, // Leave some space for status line
         }
@@ -91,15 +91,15 @@ impl Printer {
         self.viewport_height
     }
 
-    pub fn print(&mut self, key: Key) {
+    pub fn print(&mut self, key: KeyCode) {
         self.last_key = key;
         let mut stdout = io::stdout();
 
         match self.last_key {
-            Key::Char(c) => {
+            KeyCode::Char(c) => {
                 let _ = stdout.queue(style::Print(c));
             },
-            Key::Enter => {
+            KeyCode::Enter => {
                 let _ = stdout.queue(style::Print("\r\n"));
             }
             _ => {}

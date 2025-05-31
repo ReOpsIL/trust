@@ -1,6 +1,6 @@
-use console::Key;
+use crossterm::event::{KeyEvent, KeyCode, KeyModifiers};
 use crate::editor::buffer::TextBuffer;
-use crate::editor::keyboard::Keyboard;
+use crate::editor::keyboard::{Keyboard, ModifierState};
 use crate::editor::printer::Printer;
 
 pub enum WritingMode {
@@ -13,6 +13,12 @@ pub struct App {
     printer: Printer,
     buffer: TextBuffer,
     writing_mode: WritingMode,
+    exit_count: i8,
+    shift_mode: bool,
+    ctrl_mode: bool,
+    alt_mode: bool,
+    command_mode: bool, // For Mac
+    windows_mode: bool, // For Windows
 }
 
 impl App {
@@ -21,7 +27,13 @@ impl App {
             keyboard: Keyboard::new(),
             printer: Printer::new(),
             buffer: TextBuffer::new(),
-            writing_mode: WritingMode::Insert,       
+            writing_mode: WritingMode::Insert,
+            exit_count: 0,
+            shift_mode: false,
+            ctrl_mode: false,
+            alt_mode: false,
+            command_mode: false,
+            windows_mode: false,
         }
     }
 
@@ -50,31 +62,72 @@ impl App {
         );
 
         loop {
-            match self.keyboard.get_key() {
-                Ok(key) => {
-                    match key {
-                        Key::ArrowLeft => {
-                            self.buffer.move_cursor_left();
+            match (&mut self.keyboard).get_key() {
+                Ok(key_event) => {
+                    if key_event.code == KeyCode::Null {
+                        continue;
+                    }
+                    let modifiers = self.keyboard.get_modifier_state();
+                    self.shift_mode = modifiers.shift;
+                    self.ctrl_mode = modifiers.ctrl;
+                    self.alt_mode = modifiers.alt;
+                    self.command_mode = modifiers.meta; // Command key on macOS
+                    self.windows_mode = modifiers.meta; // Windows key on Windows
+
+                    if key_event.code != KeyCode::Esc {
+                        self.exit_count = 0;   
+                    }
+                    match key_event.code {
+                        KeyCode::Left => {
+                            if self.shift_mode && !self.ctrl_mode {
+                                self.buffer.select_char_left();
+                            }
+                            else if self.shift_mode && self.ctrl_mode {
+                                self.buffer.select_word_left();
+                            }
+                            else {
+                                self.buffer.move_cursor_left();
+                            }
                         },
-                        Key::ArrowRight => {
-                            self.buffer.move_cursor_right();
+                        KeyCode::Right => {
+                            if self.shift_mode && !self.ctrl_mode {
+                                self.buffer.select_char_right();
+                            }
+                            else if self.shift_mode && self.ctrl_mode {
+                                self.buffer.select_word_right();
+                            }
+                            else {
+                                self.buffer.move_cursor_right();
+                            }
                         },
-                        Key::ArrowUp => {
-                            self.buffer.move_cursor_up();
+                        KeyCode::Up => {
+                            if self.shift_mode {
+                                self.buffer.select_line_up()
+                            }
+                            else {
+                                self.buffer.move_cursor_up();
+                            }
+
                             // If cursor moves up, we might need to scroll up
                             if self.buffer.get_cursor_line() < self.printer.get_viewport_start() {
                                 self.printer.scroll_up();
                             }
                         },
-                        Key::ArrowDown => {
-                            self.buffer.move_cursor_down();
+                        KeyCode::Down => {
+                            if self.shift_mode {
+                                self.buffer.select_line_down()
+                            }
+                            else {
+                                self.buffer.move_cursor_down();
+                            }
+
                             // If cursor moves down, we might need to scroll down
                             let viewport_end = self.printer.get_viewport_start() + self.printer.get_viewport_height() - 1;
                             if self.buffer.get_cursor_line() > viewport_end {
                                 self.printer.scroll_down(self.buffer.get_line_count());
                             }
                         },
-                        Key::Enter => {
+                        KeyCode::Enter => {
                             self.buffer.insert_newline();
                             // After inserting a newline, we might need to scroll down
                             let viewport_end = self.printer.get_viewport_start() + self.printer.get_viewport_height() - 1;
@@ -82,29 +135,31 @@ impl App {
                                 self.printer.scroll_down(self.buffer.get_line_count());
                             }
                         },
-                        Key::Escape => {
-                            // Exit the application
-                            return;
+                        KeyCode::Esc => {
+                            self.exit_count+=1;
+                            if self.exit_count > 5 {
+                                // Exit the application
+                                return;    
+                            }
+
                         },
-                        Key::Backspace => {
+                        KeyCode::Backspace => {
                             self.buffer.delete_char_before_cursor();
                         },
-                        Key::Home => {
+                        KeyCode::Home => {
                             self.buffer.move_cursor_to_beginning_of_line();
                         },
-                        Key::End => {
+                        KeyCode::End => {
                             self.buffer.move_cursor_to_end_of_line();
                         },
-                        Key::Tab => {
+                        KeyCode::Tab => {
                             self.buffer.insert_char('\t');
                         },
-                        Key::BackTab => {},
-                        Key::Alt => {},
-                        Key::Del => {
+                        KeyCode::BackTab => {},
+                        KeyCode::Delete => {
                             self.buffer.delete_char_at_cursor();
                         },
-                        Key::Shift => {},
-                        Key::Insert => {
+                        KeyCode::Insert => {
                             match self.writing_mode {
                                 WritingMode::Insert => {
                                     self.writing_mode = WritingMode::Overwrite;
@@ -114,7 +169,7 @@ impl App {
                                 }
                             }
                         },
-                        Key::PageUp => {
+                        KeyCode::PageUp => {
                             // Move cursor up by viewport height
                             for _ in 0..self.printer.get_viewport_height() {
                                 self.buffer.move_cursor_up();
@@ -123,7 +178,7 @@ impl App {
                             let new_viewport_start = self.printer.get_viewport_start().saturating_sub(self.printer.get_viewport_height());
                             self.printer.set_viewport_start(new_viewport_start);
                         },
-                        Key::PageDown => {
+                        KeyCode::PageDown => {
                             // Move cursor down by viewport height
                             for _ in 0..self.printer.get_viewport_height() {
                                 self.buffer.move_cursor_down();
@@ -133,14 +188,16 @@ impl App {
                             let max_start = self.buffer.get_line_count().saturating_sub(self.printer.get_viewport_height());
                             self.printer.set_viewport_start(new_viewport_start.min(max_start));
                         },
-                        Key::Char(char) => {
-                            self.buffer.insert_char(char);
-                        },
-                        Key::CtrlC => {
-                            self.buffer.copy_selected_text();
+                        KeyCode::Char(c) => {
+                            // Handle Ctrl+C
+                            if self.ctrl_mode && c == 'c' {
+                                self.buffer.copy_selected_text();
+                            } else {
+                                self.buffer.insert_char(c);
+                            }
                         },
                         _ => {
-                            // Ignore unknown keys
+                            //print!("{:?}", key_event)
                         }
                     }
 
@@ -153,6 +210,10 @@ impl App {
                         self.buffer.get_cursor_line(),
                         self.buffer.get_cursor_col()
                     );
+
+                   //  // Print the current state of modifier keys
+                   // println!("Modifier keys: Shift={}, Ctrl={}, Alt={}, Command={}, Windows={}",
+                   //      self.shift_mode, self.ctrl_mode, self.alt_mode, self.command_mode, self.windows_mode);
                 },
                 Err(e) => println!("Error getting key: {e:?}"),
             }

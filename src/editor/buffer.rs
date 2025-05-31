@@ -1,6 +1,7 @@
 #[derive(Debug, Clone)]
 pub struct TextBuffer {
     lines: Vec<String>,
+    selected_lines: Vec<String>,
     cursor_line: usize, // 0-indexed line number
     cursor_col: usize,  // 0-indexed character column in the current line
     clipboard: Option<Vec<String>>, // For cut/copy/paste - stores lines
@@ -11,6 +12,7 @@ impl TextBuffer {
     pub fn new() -> Self {
         TextBuffer {
             lines: vec![String::new()], // Start with one empty line
+            selected_lines: vec![String::new()], // Start with one empty line
             cursor_line: 0,
             cursor_col: 0,
             clipboard: None,
@@ -28,6 +30,38 @@ impl TextBuffer {
         // Optionally, handle out-of-bounds gracefully or panic/error
     }
 
+    pub fn select_word_left(&self) {
+
+    }
+
+    
+    pub fn select_word_right(&self) {
+
+    }
+    
+    pub fn select_char_left(&self) {
+
+    }
+    
+    pub fn select_char_right(&self) {
+        
+    }
+    pub fn select_line_down(&mut self) {
+        if self.cursor_line < self.lines.len() - 1 {
+            self.cursor_line += 1;
+        }
+    }
+    pub fn select_line_up(&mut self) {
+        if self.cursor_line > 0 {
+            self.cursor_line -= 1;
+        }
+    }
+    pub fn select_line_to_end(&mut self) {
+        self.cursor_line = self.lines.len() - 1;
+    }
+    pub fn select_line_to_start(&mut self) {
+        self.cursor_line = 0;
+    }
     pub fn move_cursor_up(&mut self) {
         if self.cursor_line > 0 {
             self.cursor_line -= 1;
@@ -36,7 +70,7 @@ impl TextBuffer {
             self.cursor_col = self.cursor_col.min(current_line_len);
         }
     }
-
+    
     pub fn move_cursor_down(&mut self) {
         if self.cursor_line < self.lines.len() - 1 {
             self.cursor_line += 1;
