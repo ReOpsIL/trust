@@ -226,7 +226,7 @@ impl TextBuffer {
         }
     }
 
-    
+
     pub fn paste(&mut self) {
         if let Some(lines_to_paste) = &self.clipboard {
             if lines_to_paste.is_empty() {
@@ -328,6 +328,14 @@ impl TextBuffer {
 
     pub fn get_line(&self, line_num: usize) -> Option<&String> {
         self.lines.get(line_num)
+    }
+
+    pub fn get_cursor_line(&self) -> usize {
+        self.cursor_line
+    }
+
+    pub fn get_cursor_col(&self) -> usize {
+        self.cursor_col
     }
 
     pub fn get_buffer_content(&self) -> String {
