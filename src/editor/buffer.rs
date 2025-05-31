@@ -1,7 +1,7 @@
 #[derive(Debug, Clone)]
 pub struct TextBuffer {
     lines: Vec<String>,
-    selected_lines: Vec<String>,
+    //selected_lines: Vec<String>,
     cursor_line: usize, // 0-indexed line number
     cursor_col: usize,  // 0-indexed character column in the current line
     clipboard: Option<Vec<String>>, // For cut/copy/paste - stores lines
@@ -12,7 +12,7 @@ impl TextBuffer {
     pub fn new() -> Self {
         TextBuffer {
             lines: vec![String::new()], // Start with one empty line
-            selected_lines: vec![String::new()], // Start with one empty line
+            //selected_lines: vec![String::new()], // Start with one empty line
             cursor_line: 0,
             cursor_col: 0,
             clipboard: None,
@@ -30,22 +30,122 @@ impl TextBuffer {
         // Optionally, handle out-of-bounds gracefully or panic/error
     }
 
-    pub fn select_word_left(&self) {
-
-    }
-
-    
-    pub fn select_word_right(&self) {
-
-    }
-    
-    pub fn select_char_left(&self) {
-
-    }
-    
-    pub fn select_char_right(&self) {
+    pub fn undo(&mut self) {
         
     }
+    pub fn redo(&mut self) {
+
+    }
+    pub fn select_all(&mut self) {
+        
+    }
+    pub fn select_word_left(&mut self) {
+        let current_line = &self.lines[self.cursor_line];
+        let chars: Vec<char> = current_line.chars().collect();
+
+        // If cursor is at the start of the line, no word to select
+        if self.cursor_col == 0 {
+            //self.selected_lines = vec![String::new()];
+            return;
+        }
+
+        // Find the start of the word to the left
+        let mut start_col = self.cursor_col;
+        let mut end_col = self.cursor_col;
+
+        // Move backwards to find the start of the word
+        while start_col > 0 && !chars[start_col - 1].is_whitespace() {
+            start_col -= 1;
+        }
+
+        // Extract the selected word
+        let selected_text: String = chars[start_col..end_col].iter().collect();
+        //self.selected_lines = vec![selected_text.clone()];
+
+        // Update cursor to the start of the selected word
+        self.cursor_col = start_col;
+
+        // Store in clipboard for potential copy/paste
+        self.clipboard = Some(vec![selected_text]);
+    }
+
+
+    // Select the word to the right of the cursor
+    pub fn select_word_right(&mut self) {
+        let current_line = &self.lines[self.cursor_line];
+        let chars: Vec<char> = current_line.chars().collect();
+        let line_len = chars.len();
+
+        // If cursor is at the end of the line, no word to select
+        if self.cursor_col >= line_len {
+            //self.selected_lines = vec![String::new()];
+            return;
+        }
+
+        // Find the end of the word to the right
+        let mut start_col = self.cursor_col;
+        let mut end_col = self.cursor_col;
+
+        // Move forward to find the end of the word
+        while end_col < line_len && !chars[end_col].is_whitespace() {
+            end_col += 1;
+        }
+
+        // Extract the selected word
+        let selected_text: String = chars[start_col..end_col].iter().collect();
+        //self.selected_lines = vec![selected_text.clone()];
+
+        // Update cursor to the end of the selected word
+        self.cursor_col = end_col;
+
+        // Store in clipboard for potential copy/paste
+        self.clipboard = Some(vec![selected_text]);
+    }
+
+    pub fn select_char_left(&mut self) {
+        let current_line = &self.lines[self.cursor_line];
+        let chars: Vec<char> = current_line.chars().collect();
+
+        // If cursor is at the start of the line, nothing to select
+        if self.cursor_col == 0 {
+            //self.selected_lines = vec![String::new()];
+            return;
+        }
+
+        // Select the character immediately to the left
+        let selected_char = chars[self.cursor_col - 1];
+        //self.selected_lines = vec![selected_char.to_string()];
+
+        // Move cursor left
+        self.cursor_col -= 1;
+
+        // Store in clipboard
+        self.clipboard = Some(vec![selected_char.to_string()]);
+    }
+
+    // Select the character to the right of the cursor
+    pub fn select_char_right(&mut self) {
+        let current_line = &self.lines[self.cursor_line];
+        let chars: Vec<char> = current_line.chars().collect();
+        let line_len = chars.len();
+
+        // If cursor is at the end of the line, nothing to select
+        if self.cursor_col >= line_len {
+            //self.selected_lines = vec![String::new()];
+            return;
+        }
+
+        // Select the character at the cursor
+        let selected_char = chars[self.cursor_col];
+        //self.selected_lines = vec![selected_char.to_string()];
+
+        // Move cursor right
+        self.cursor_col += 1;
+
+        // Store in clipboard
+        self.clipboard = Some(vec![selected_char.to_string()]);
+    }
+
     pub fn select_line_down(&mut self) {
         if self.cursor_line < self.lines.len() - 1 {
             self.cursor_line += 1;
@@ -70,7 +170,7 @@ impl TextBuffer {
             self.cursor_col = self.cursor_col.min(current_line_len);
         }
     }
-    
+
     pub fn move_cursor_down(&mut self) {
         if self.cursor_line < self.lines.len() - 1 {
             self.cursor_line += 1;
@@ -247,6 +347,9 @@ impl TextBuffer {
     }
 
 
+    pub fn cut_selected_text(&mut self) {
+    }
+    
     pub fn copy_selected_text(&mut self) {
         if let Some(lines_to_copy) = &self.clipboard {
             if lines_to_copy.is_empty() {

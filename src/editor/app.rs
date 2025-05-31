@@ -189,9 +189,32 @@ impl App {
                             self.printer.set_viewport_start(new_viewport_start.min(max_start));
                         },
                         KeyCode::Char(c) => {
-                            // Handle Ctrl+C
-                            if self.ctrl_mode && c == 'c' {
-                                self.buffer.copy_selected_text();
+                            if self.ctrl_mode {
+                                match c {
+                                    'c' => {
+                                        self.buffer.copy_selected_text();
+                                    },
+                                    'v' => {
+                                        self.buffer.paste();
+                                    },
+                                    'x' => {
+                                        self.buffer.cut_selected_text();
+                                    },
+                                    'a' => {
+                                        self.buffer.select_all();
+                                    },
+                                    'z' => {
+                                        if self.shift_mode {
+                                            self.buffer.redo();
+                                        }
+                                        else {
+                                            self.buffer.undo();
+                                        }
+                                    },
+                                    _ => {
+                                        self.buffer.insert_char(c);
+                                    }
+                                }
                             } else {
                                 self.buffer.insert_char(c);
                             }
