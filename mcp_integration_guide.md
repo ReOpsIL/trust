@@ -4,6 +4,7 @@
 This guide shows how to effectively combine both MCP servers for comprehensive S&P 500 technical analysis.
 
 ---
+![Alt text](trust.png "Trust")
 
 ## Quick Start Workflow
 

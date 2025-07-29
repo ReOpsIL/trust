@@ -1,5 +1,8 @@
 # Financial Analysis MCP Servers
 
+![Alt text](trust.png "Trust")
+
+
 A comprehensive suite of Model Context Protocol (MCP) servers that provide technical analysis and market data capabilities for financial analysis and trading applications.
 
 ## Components
